@@ -67,14 +67,14 @@ window.render = function render() {
   const container = document.getElementById('app')
   if (!container) return
 
-  // Always render author bar at top
+  // Always render author bar inside the app box at the top
   let authorBar = document.getElementById('author-bar')
   if (!authorBar) {
     authorBar = document.createElement('div')
     authorBar.id = 'author-bar'
-    authorBar.style.cssText = 'width:100%;background:#0f172a;color:#94a3b8;font-size:10px;font-weight:700;text-align:center;padding:6px 0;letter-spacing:0.04em;'
+    authorBar.style.cssText = 'width:100%;background:#0f172a;color:#94a3b8;font-size:10px;font-weight:700;text-align:center;padding:7px 0;letter-spacing:0.04em;border-radius:2rem 2rem 0 0;'
     authorBar.innerText = 'Author © Vishesh.chaturvedi | All rights reserved | App version: 2.0'
-    document.body.insertBefore(authorBar, document.getElementById('app'))
+    container.parentNode.insertBefore(authorBar, container)
   }
 
   switch (window.state.view) {
