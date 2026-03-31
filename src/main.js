@@ -2,9 +2,13 @@
 
 import { appendHistory, loadHistory } from './storage.js'
 
+// Load saved username
+const savedName = localStorage.getItem('math_master_username') || ''
+
 // Global State Configuration
 window.state = {
-  view: 'home',
+  view: savedName ? 'home' : 'welcome',
+  userName: savedName,
   mode: null,
   minRange: 100,
   maxRange: 999,
@@ -63,7 +67,20 @@ window.render = function render() {
   const container = document.getElementById('app')
   if (!container) return
 
+  // Always render author bar at top
+  let authorBar = document.getElementById('author-bar')
+  if (!authorBar) {
+    authorBar = document.createElement('div')
+    authorBar.id = 'author-bar'
+    authorBar.style.cssText = 'width:100%;background:#0f172a;color:#94a3b8;font-size:10px;font-weight:700;text-align:center;padding:6px 0;letter-spacing:0.04em;'
+    authorBar.innerText = 'Author © Vishesh.chaturvedi | All rights reserved | App version: 2.0'
+    document.body.insertBefore(authorBar, document.getElementById('app'))
+  }
+
   switch (window.state.view) {
+    case 'welcome':
+      renderWelcome(container)
+      break
     case 'home':
       renderHome(container)
       break
@@ -86,8 +103,38 @@ window.render = function render() {
       renderPerformanceHistory(container)
       break
     default:
-      renderHome(container)
+      renderWelcome(container)
   }
+}
+
+function renderWelcome(container) {
+  container.innerHTML = `
+    <div class="p-8 text-center fade-in flex flex-col items-center justify-center min-h-[400px]">
+      <div class="w-20 h-20 bg-blue-600 text-white rounded-3xl flex items-center justify-center shadow-xl shadow-blue-200 mb-6">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg>
+      </div>
+      <h1 class="text-3xl font-black text-slate-800 mb-2">Math Master</h1>
+      <p class="text-slate-400 font-medium mb-10">Speed and Accuracy Trainer</p>
+      <div class="w-full">
+        <label class="block text-sm font-bold text-slate-500 mb-2">What's your name?</label>
+        <input type="text" id="nameInput" placeholder="Enter your name..." class="w-full p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl text-center text-xl font-bold focus:border-blue-500 outline-none mb-4" onkeypress="if(event.key==='Enter') submitName()">
+        <button onclick="submitName()" class="w-full py-4 bg-blue-600 text-white font-black text-lg rounded-2xl shadow-lg shadow-blue-100 active:scale-95 transition-transform">
+          Let's Start! 🚀
+        </button>
+      </div>
+    </div>
+  `
+  setTimeout(() => document.getElementById('nameInput')?.focus(), 100)
+}
+
+window.submitName = function submitName() {
+  const name = document.getElementById('nameInput')?.value.trim()
+  if (!name) {
+    document.getElementById('nameInput').classList.add('border-rose-500')
+    return
+  }
+  localStorage.setItem('math_master_username', name)
+  window.setState({ view: 'home', userName: name })
 }
 
 function renderHome(container) {
@@ -100,6 +147,7 @@ function renderHome(container) {
               </div>
               <h1 class="text-3xl font-black text-slate-800">Math Master</h1>
               <p class="text-slate-400 font-medium">Speed and Accuracy Trainer</p>
+              ${window.state.userName ? `<div class="mt-2 px-4 py-1 bg-blue-50 text-blue-600 rounded-full text-sm font-bold">👋 Hello, ${window.state.userName}!</div>` : ''}
           </div>
 
           <div class="grid grid-cols-1 gap-3">
@@ -221,6 +269,9 @@ function renderConfig(container) {
       `
   } else if (window.state.mode === 'tables') {
     configHtml += `
+          <div class="bg-blue-50 text-blue-700 p-3 rounded-xl flex items-center gap-2 text-[10px] font-bold border border-blue-100 mb-4">
+              💡 YOU CAN ANSWER IN ANY FORMAT: 14*3 OR 14,3 OR 14×3 — ALL ARE ACCEPTED.
+          </div>
           <div>
               <label class="block text-sm font-bold text-slate-500 mb-4">Select Tables to Practice</label>
               <div class="grid grid-cols-6 gap-2 mb-6 max-h-48 overflow-y-auto p-1 custom-scrollbar">
@@ -457,7 +508,16 @@ window.handleAnswer = async function handleAnswer() {
   const q = window.state.questions[window.state.currentQuestionIndex]
 
   let isCorrect = false
-  if (q.type === 'reverse-table') isCorrect = val === q.a
+  if (q.type === 'reverse-table') {
+    // Accept formats: "14*3", "14,3", "14×3" as well as direct "14*3" string match
+    const normalize = (s) => s.replace(/×/g, '*').replace(/,/g, '*').replace(/\s/g, '')
+    const normVal = normalize(val)
+    const normAns = normalize(q.a)
+    // Also check if user typed the factors in reverse order e.g. 3*14 for 14*3
+    const parts = normVal.split('*')
+    const revVal = parts.length === 2 ? parts[1] + '*' + parts[0] : null
+    isCorrect = normVal === normAns || (revVal !== null && revVal === normAns)
+  }
   else isCorrect = parseFloat(val) === q.a
 
   if (!isCorrect) {
